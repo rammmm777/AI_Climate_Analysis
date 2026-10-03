@@ -1,0 +1,45 @@
+# Virtual environment
+venv/
+.venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Environment / secrets
+.env
+*.env
+
+# SQLite database
+outputs/*.db
+
+# Generated reports
+outputs/*.html
+
+# Generated output files
+outputs/*.csv
+outputs/*.xlsx
+
+# Temporary files
+*.tmp
+*.temp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# VS Code
+.vscode/
+
+# Raw/demo source datasets
+data/climate_data.csv
+data/hyderabad_weather_monthly.csv
+data/hyderabad_weather_monthly.csv.gz
+data/owid_co2_data.csv
+data/owid_energy_data.csv
