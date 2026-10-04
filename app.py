@@ -475,6 +475,46 @@ elif page == "EDA":
             use_container_width=True
         )
 
+        # ----------------------------------------------------
+        # CORRELATION ANALYSIS
+        # ----------------------------------------------------
+
+        st.subheader(
+            "🔗 Climate Variable Correlation"
+        )
+
+        numeric_columns = df.select_dtypes(
+            include="number"
+        ).columns
+
+        if len(numeric_columns) >= 2:
+
+            correlation_matrix = (
+                df[numeric_columns]
+                .corr()
+                .round(2)
+            )
+
+            st.dataframe(
+                correlation_matrix,
+                use_container_width=True
+            )
+
+            st.caption(
+                "Correlation values range from -1 to +1. "
+                "Positive values indicate that variables tend "
+                "to increase together, while negative values "
+                "indicate an inverse relationship. Correlation "
+                "does not establish causation."
+            )
+
+        else:
+
+            st.info(
+                "Not enough numerical variables are available "
+                "for correlation analysis."
+            )
+
 
 # ============================================================
 # AI PREDICTION
@@ -1257,9 +1297,13 @@ elif page == "Environmental Analysis":
                     )
                 )
 
-                min_values = comparison_df.min()
+                min_values = (
+                    comparison_df.min()
+                )
 
-                max_values = comparison_df.max()
+                max_values = (
+                    comparison_df.max()
+                )
 
                 denominator = (
                     max_values
@@ -1554,8 +1598,6 @@ elif page == "Report":
                 env_df = env_df.sort_values(
                     "year"
                 )
-
-                latest_row = env_df.iloc[-1]
 
                 # CO2
                 co2_column = get_first_existing_column(
