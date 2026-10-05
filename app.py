@@ -50,30 +50,20 @@ if "esg_result" not in st.session_state:
 # ============================================================
 
 def get_first_existing_column(df, candidates):
-    """
-    Return the first matching column from a list of candidates.
-    """
+    """Return the first matching column from a list."""
     for column in candidates:
         if column in df.columns:
             return column
-
     return None
 
 
 def safe_numeric(series):
-    """
-    Convert a pandas Series to numeric values.
-    """
-    return pd.to_numeric(
-        series,
-        errors="coerce"
-    )
+    """Convert a Series to numeric values."""
+    return pd.to_numeric(series, errors="coerce")
 
 
 def load_environmental_data():
-    """
-    Load the integrated annual environmental dataset.
-    """
+    """Load the integrated annual environmental dataset."""
     if not INTEGRATED_ENVIRONMENT_FILE.exists():
         return None
 
@@ -82,7 +72,6 @@ def load_environmental_data():
     )
 
     if "year" in env_df.columns:
-
         env_df["year"] = pd.to_numeric(
             env_df["year"],
             errors="coerce"
@@ -101,9 +90,7 @@ def load_environmental_data():
 # SIDEBAR NAVIGATION
 # ============================================================
 
-st.sidebar.title(
-    "🌍 Climate Analysis"
-)
+st.sidebar.title("🌍 Climate Analysis")
 
 page = st.sidebar.radio(
     "Navigation",
@@ -233,9 +220,7 @@ if df is not None:
 
     try:
 
-        df = preprocess_data(
-            df
-        )
+        df = preprocess_data(df)
 
     except Exception as error:
 
@@ -267,21 +252,18 @@ if page == "Overview":
         col1, col2, col3 = st.columns(3)
 
         with col1:
-
             st.metric(
                 "Total Records",
                 df.shape[0]
             )
 
         with col2:
-
             st.metric(
                 "Total Features",
                 df.shape[1]
             )
 
         with col3:
-
             st.metric(
                 "Missing Values",
                 int(
@@ -647,7 +629,7 @@ elif page == "AI Prediction":
             )
 
             # ------------------------------------------------
-            # PERFORMANCE COMPARISON
+            # BETTER MODEL
             # ------------------------------------------------
 
             if rf_mae < linear_mae:
@@ -663,6 +645,36 @@ elif page == "AI Prediction":
                     "Linear Regression has the lower MAE "
                     "on the current test set."
                 )
+
+            # ------------------------------------------------
+            # MODEL COMPARISON
+            # ------------------------------------------------
+
+            st.subheader(
+                "📊 Model Comparison"
+            )
+
+            model_comparison = pd.DataFrame(
+                {
+                    "Model": [
+                        "Linear Regression",
+                        "Random Forest"
+                    ],
+                    "MAE (°C)": [
+                        round(linear_mae, 2),
+                        round(rf_mae, 2)
+                    ],
+                    "R² Score": [
+                        round(linear_r2, 2),
+                        round(rf_r2, 2)
+                    ]
+                }
+            )
+
+            st.dataframe(
+                model_comparison,
+                use_container_width=True
+            )
 
             # ------------------------------------------------
             # FEATURE IMPORTANCE
