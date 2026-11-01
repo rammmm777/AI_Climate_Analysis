@@ -1,8 +1,30 @@
+
+import os
 import pandas as pd
+import joblib
 
 from sklearn.linear_model import LinearRegression
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error, r2_score
+
+
+# ============================================================
+# MODEL SAVE DIRECTORY
+# ============================================================
+
+PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+MODEL_DIR = os.path.join(PROJECT_DIR, "saved_models")
+
+os.makedirs(MODEL_DIR, exist_ok=True)
+
+LINEAR_MODEL_PATH = os.path.join(
+    MODEL_DIR, "linear_regression.pkl"
+)
+
+RANDOM_FOREST_MODEL_PATH = os.path.join(
+    MODEL_DIR, "random_forest.pkl"
+)
 
 
 # ============================================================
@@ -38,54 +60,41 @@ def prepare_data(df):
     ]
 
     for column in required_columns:
-
         if column not in df.columns:
-
             raise ValueError(
                 f"Required column '{column}' is missing."
             )
 
     data = df.copy()
 
-    # Make sure data is chronologically ordered
+    data["Date"] = pd.to_datetime(
+        data["Date"],
+        errors="coerce"
+    )
+
+    data = data.dropna(
+        subset=["Date"]
+    )
+
     data = data.sort_values(
         "Date"
-    ).reset_index(
-        drop=True
-    )
+    ).reset_index(drop=True)
 
-    # Create previous-month features
-    data["Previous_Temperature"] = (
-        data["Temperature"].shift(1)
-    )
+    previous_features = {
+        "Previous_Temperature": "Temperature",
+        "Previous_Minimum_Temperature": "Minimum_Temperature",
+        "Previous_Maximum_Temperature": "Maximum_Temperature",
+        "Previous_Rainfall": "Rainfall",
+        "Previous_Pressure": "Pressure",
+        "Previous_Sunshine": "Sunshine"
+    }
 
-    data["Previous_Minimum_Temperature"] = (
-        data["Minimum_Temperature"].shift(1)
-    )
+    for feature, source_column in previous_features.items():
+        data[feature] = data[source_column].shift(1)
 
-    data["Previous_Maximum_Temperature"] = (
-        data["Maximum_Temperature"].shift(1)
-    )
-
-    data["Previous_Rainfall"] = (
-        data["Rainfall"].shift(1)
-    )
-
-    data["Previous_Pressure"] = (
-        data["Pressure"].shift(1)
-    )
-
-    data["Previous_Sunshine"] = (
-        data["Sunshine"].shift(1)
-    )
-
-    # Remove the first row because it has no
-    # previous-month information
     data = data.dropna(
         subset=FEATURES + [TARGET]
-    ).reset_index(
-        drop=True
-    )
+    ).reset_index(drop=True)
 
     return data
 
@@ -99,45 +108,22 @@ def split_data(df):
     data = prepare_data(df)
 
     if len(data) < 10:
-
         raise ValueError(
             "Not enough records available for time-series prediction."
         )
 
-    split_index = int(
-        len(data) * 0.80
-    )
+    split_index = int(len(data) * 0.80)
 
-    train_data = data.iloc[
-        :split_index
-    ]
+    train_data = data.iloc[:split_index]
+    test_data = data.iloc[split_index:]
 
-    test_data = data.iloc[
-        split_index:
-    ]
+    X_train = train_data[FEATURES]
+    y_train = train_data[TARGET]
 
-    X_train = train_data[
-        FEATURES
-    ]
+    X_test = test_data[FEATURES]
+    y_test = test_data[TARGET]
 
-    y_train = train_data[
-        TARGET
-    ]
-
-    X_test = test_data[
-        FEATURES
-    ]
-
-    y_test = test_data[
-        TARGET
-    ]
-
-    return (
-        X_train,
-        X_test,
-        y_train,
-        y_test
-    )
+    return X_train, X_test, y_train, y_test
 
 
 # ============================================================
@@ -146,32 +132,23 @@ def split_data(df):
 
 def train_temperature_model(df):
 
-    (
-        X_train,
-        X_test,
-        y_train,
-        y_test
-    ) = split_data(df)
+    X_train, X_test, y_train, y_test = split_data(df)
 
     model = LinearRegression()
 
-    model.fit(
-        X_train,
-        y_train
-    )
+    model.fit(X_train, y_train)
 
-    predictions = model.predict(
-        X_test
-    )
+    # Save the trained model
+    joblib.dump(model, LINEAR_MODEL_PATH)
+
+    predictions = model.predict(X_test)
 
     mae = mean_absolute_error(
-        y_test,
-        predictions
+        y_test, predictions
     )
 
     r2 = r2_score(
-        y_test,
-        predictions
+        y_test, predictions
     )
 
     return (
@@ -189,12 +166,7 @@ def train_temperature_model(df):
 
 def train_random_forest_model(df):
 
-    (
-        X_train,
-        X_test,
-        y_train,
-        y_test
-    ) = split_data(df)
+    X_train, X_test, y_train, y_test = split_data(df)
 
     model = RandomForestRegressor(
         n_estimators=200,
@@ -202,23 +174,19 @@ def train_random_forest_model(df):
         max_depth=8
     )
 
-    model.fit(
-        X_train,
-        y_train
-    )
+    model.fit(X_train, y_train)
 
-    predictions = model.predict(
-        X_test
-    )
+    # Save the trained model
+    joblib.dump(model, RANDOM_FOREST_MODEL_PATH)
+
+    predictions = model.predict(X_test)
 
     mae = mean_absolute_error(
-        y_test,
-        predictions
+        y_test, predictions
     )
 
     r2 = r2_score(
-        y_test,
-        predictions
+        y_test, predictions
     )
 
     return (
@@ -228,6 +196,26 @@ def train_random_forest_model(df):
         y_test,
         predictions
     )
+
+
+# ============================================================
+# LOAD SAVED MODELS
+# ============================================================
+
+def load_saved_models():
+
+    linear_model = None
+    random_forest_model = None
+
+    if os.path.exists(LINEAR_MODEL_PATH):
+        linear_model = joblib.load(LINEAR_MODEL_PATH)
+
+    if os.path.exists(RANDOM_FOREST_MODEL_PATH):
+        random_forest_model = joblib.load(
+            RANDOM_FOREST_MODEL_PATH
+        )
+
+    return linear_model, random_forest_model
 
 
 # ============================================================
@@ -244,10 +232,6 @@ def get_feature_importance(model):
     importance_data = importance_data.sort_values(
         by="Importance",
         ascending=False
-    )
-
-    importance_data = importance_data.reset_index(
-        drop=True
-    )
+    ).reset_index(drop=True)
 
     return importance_data
